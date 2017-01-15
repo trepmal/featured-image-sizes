@@ -17,6 +17,9 @@ $featured_image_sizes = new Featured_Image_Sizes();
 
 class Featured_Image_Sizes {
 
+	/**
+	 *
+	 */
 	function __construct() {
 
 		global $_wp_post_type_features;
@@ -24,17 +27,22 @@ class Featured_Image_Sizes {
 
 		$this->allowed_post_types = apply_filters( 'fis_post_types', $possible_post_types );
 
-		add_filter( 'admin_post_thumbnail_html', array( &$this, 'admin_post_thumbnail_html' ), 10, 2 );
-		add_action( 'save_post', array( &$this, 'save_post' ), 10, 2 );
+		add_filter( 'admin_post_thumbnail_html', array( $this, 'admin_post_thumbnail_html' ), 10, 2 );
+		add_action( 'save_post',                 array( $this, 'save_post' ), 10, 2 );
 
-		add_filter( 'post_thumbnail_size', array( &$this, 'post_thumbnail_size' ) );
+		add_filter( 'post_thumbnail_size',       array( $this, 'post_thumbnail_size' ) );
 
 	}
 
+	/**
+	 *
+	 */
 	function admin_post_thumbnail_html( $content, $post_id ) {
 
 		$post_type = get_post_type( $post_id );
-		if ( ! isset( $this->allowed_post_types[ $post_type ] ) ) return $content;
+		if ( ! isset( $this->allowed_post_types[ $post_type ] ) ) {
+			return $content;
+		}
 
 		ob_start();
 		wp_nonce_field( 'na-fis-image', 'nn-fis-image' );
@@ -56,16 +64,19 @@ class Featured_Image_Sizes {
 		return $content . $html;
 	}
 
+	/**
+	 *
+	 */
 	function save_post( $post_id, $post ) {
 
-		if ( ! isset( $_POST['nn-fis-image'] ) ) //make sure our custom value is being sent
+		if (
+			( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) ||
+			! wp_verify_nonce( $_POST['nn-fis-image'], 'na-fis-image' ) ||
+			! isset( $_POST['nn-fis-image'] ) ||
+			! current_user_can( 'edit_post', $post_id )
+		) {
 			return;
-		if ( ! wp_verify_nonce( $_POST['nn-fis-image'], 'na-fis-image' ) ) //verify intent
-			return;
-		if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) //no auto saving
-			return;
-		if ( ! current_user_can( 'edit_post', $post_id ) ) //verify permissions
-			return;
+		}
 
 		$fis_size = trim( $_POST['fis-image-size'] );
 		if ( empty( $fis_size ) ) {
@@ -75,24 +86,33 @@ class Featured_Image_Sizes {
 
 		// make sure the POSTed value is an okay size name
 		$ok_sizes = get_intermediate_image_sizes();
-		if ( ! in_array( $fis_size, $ok_sizes ) ) return;
+		if ( ! in_array( $fis_size, $ok_sizes ) ) {
+			return;
+		}
 
 		update_post_meta( $post_id, 'fis-image-size', $fis_size );
 
 	}
 
+	/**
+	 *
+	 */
 	function post_thumbnail_size( $size ) {
 
 		// make sure we're in the main loop
 		// so as not to interfere with secondary loops (perhaps widgets)
 		global $wp_query;
-		if ( ! $wp_query->in_the_loop ) return $size;
+		if ( ! $wp_query->in_the_loop ) {
+			return $size;
+		}
 
 		// var_dump( get_the_ID() );
 
 		$fis_size = get_post_meta( get_the_ID(), 'fis-image-size', true );
 
-		if ( empty( $fis_size ) ) return $size;
+		if ( empty( $fis_size ) ) {
+			return $size;
+		}
 
 		return $fis_size;
 	}
