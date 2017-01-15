@@ -2,8 +2,8 @@
 /*
  * Plugin Name: Feature Image Sizes
  * Plugin URI: trepmal.com
- * Description:
- * Version:
+ * Description: Change the featured image's size
+ * Version: 0.2.0
  * Author: Kailey Lampert
  * Author URI: kaileylampert.com
  * License: GPLv2 or later
@@ -18,44 +18,54 @@ $featured_image_sizes = new Featured_Image_Sizes();
 class Featured_Image_Sizes {
 
 	/**
+	 * Get hooked in
 	 *
+	 * @since 0.2.0
 	 */
 	function __construct() {
 
-		global $_wp_post_type_features;
-		$possible_post_types = wp_list_filter( $_wp_post_type_features, array( 'thumbnail' => 1 ) );
-
-		$this->allowed_post_types = apply_filters( 'fis_post_types', $possible_post_types );
-
 		add_filter( 'admin_post_thumbnail_html', array( $this, 'admin_post_thumbnail_html' ), 10, 2 );
 		add_action( 'save_post',                 array( $this, 'save_post' ), 10, 2 );
-
 		add_filter( 'post_thumbnail_size',       array( $this, 'post_thumbnail_size' ) );
 
 	}
 
 	/**
+	 * Add option field to edit page, in featured image meta box
 	 *
+	 * @since 0.2.0
+	 *
+	 * @param string $content Admin post thumbnail HTML markup
+	 * @param int $post_id Post ID
+	 * @return string Admin post thumbnail HTML markup
 	 */
 	function admin_post_thumbnail_html( $content, $post_id ) {
 
+		global $_wp_post_type_features;
+
 		$post_type = get_post_type( $post_id );
-		if ( ! isset( $this->allowed_post_types[ $post_type ] ) ) {
+
+		$possible_post_types = wp_list_filter( $_wp_post_type_features, array( 'thumbnail' => 1 ) );
+		$allowed_post_types = apply_filters( 'fis_post_types', $possible_post_types );
+
+		if ( ! isset( $allowed_post_types[ $post_type ] ) ) {
 			return $content;
 		}
 
 		ob_start();
+
 		wp_nonce_field( 'na-fis-image', 'nn-fis-image' );
 		$saved_value = get_post_meta( $post_id, 'fis-image-size', true );
 
 		echo '<label>';
 		_e( 'Choose a size for this image to be displayed at', 'featured-image-sizes' );
 		echo '<select name="fis-image-size">';
-		echo '<option value="">' . __( 'Depend on theme setting', 'featured-image-sizes' ) .'</option>';
+		echo '<option value="">' . __( 'Use theme setting', 'featured-image-sizes' ) .'</option>';
 
-		foreach( get_intermediate_image_sizes() as $size ) {
-			$selected = selected( $size, $saved_value, false );
-			echo "<option value='$size'$selected>$size</option>";
+		foreach ( get_intermediate_image_sizes() as $size ) {
+			echo '<option value="' . esc_attr( $size ) .'"';
+			selected( $size, $saved_value, false );
+			echo '>' . esc_html( $size ) . '</option>';
 		}
 		echo '</select></label>';
 
@@ -65,7 +75,12 @@ class Featured_Image_Sizes {
 	}
 
 	/**
+	 * Save field
 	 *
+	 * @since 0.2.0
+	 *
+	 * @param int $post_id Post ID
+	 * @param WP_Post $post Post object
 	 */
 	function save_post( $post_id, $post ) {
 
@@ -95,7 +110,13 @@ class Featured_Image_Sizes {
 	}
 
 	/**
+	 * Change thumbnail size on output
 	 *
+	 * @since 0.2.0
+	 *
+	 * @param string|array $size The post thumbnail size. Image size or array of width and height
+	 *                           values (in that order).
+	 * @return string|array Named image size or width/height array
 	 */
 	function post_thumbnail_size( $size ) {
 
@@ -105,8 +126,6 @@ class Featured_Image_Sizes {
 		if ( ! $wp_query->in_the_loop ) {
 			return $size;
 		}
-
-		// var_dump( get_the_ID() );
 
 		$fis_size = get_post_meta( get_the_ID(), 'fis-image-size', true );
 
