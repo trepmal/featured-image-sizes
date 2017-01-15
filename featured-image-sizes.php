@@ -17,8 +17,6 @@ $featured_image_sizes = new Featured_Image_Sizes();
 
 class Featured_Image_Sizes {
 
-	var $textdomain = 'featured-image-sizes';
-
 	function __construct() {
 
 		global $_wp_post_type_features;
@@ -43,9 +41,9 @@ class Featured_Image_Sizes {
 		$saved_value = get_post_meta( $post_id, 'fis-image-size', true );
 
 		echo '<label>';
-		_e( 'Choose a size for this image to be displayed at', $this->textdomain );
+		_e( 'Choose a size for this image to be displayed at', 'featured-image-sizes' );
 		echo '<select name="fis-image-size">';
-		echo '<option value="">' . __( 'Depend on theme setting', $this->textdomain ) .'</option>';
+		echo '<option value="">' . __( 'Depend on theme setting', 'featured-image-sizes' ) .'</option>';
 
 		foreach( get_intermediate_image_sizes() as $size ) {
 			$selected = selected( $size, $saved_value, false );
